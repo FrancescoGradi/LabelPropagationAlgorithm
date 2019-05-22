@@ -1,14 +1,11 @@
 import networkx as nx
-import numpy as np
+import algorithms
 
 G = nx.read_edgelist("data/Wiki-Vote.txt", create_using=nx.DiGraph(), nodetype=int)
 
-print(nx.info(G))
+# Alcuni nodi non ci sono, ci sono nodi isolati, quindi li inserisco manualmente subito
+G.add_nodes_from(range(G.number_of_nodes()))
 
-pi = range(1, G.number_of_nodes() + 1)
-pi = np.random.permutation(pi)
+labels = algorithms.APM(G, gamma=0.1, iterations=1)
 
-l = range(1, G.number_of_nodes() + 1)
-v = np.ones(G.number_of_nodes() + 1)
-
-print(pi)
+print(labels)
