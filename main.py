@@ -1,13 +1,14 @@
-import snap
+import networkx as nx
 import numpy as np
 
-G = snap.LoadEdgeList(snap.PNGraph, "Wiki-Vote.txt", 0, 1)
-print "G5: Nodes %d, Edges %d" % (G.GetNodes(), G.GetEdges())
+G = nx.read_edgelist("data/Wiki-Vote.txt", create_using=nx.DiGraph(), nodetype=int)
 
-pi = range(1, G.GetNodes() + 1)
+print(nx.info(G))
+
+pi = range(1, G.number_of_nodes() + 1)
 pi = np.random.permutation(pi)
 
-l = range(1, G.GetNodes() + 1)
-v = np.ones(G.GetNodes() + 1)
+l = range(1, G.number_of_nodes() + 1)
+v = np.ones(G.number_of_nodes() + 1)
 
-print l
+print(pi)
