@@ -6,9 +6,9 @@ def APM(G, gamma=0.1, iterations=1):
     # Inizializzazione vettori labels, pi e v
     n = G.number_of_nodes()
 
-    labels = range(n)
+    labels = list(range(n))
 
-    pi = range(n)
+    pi = list(range(n))
     pi = np.random.permutation(pi)
 
     v = np.ones(n)
@@ -31,4 +31,4 @@ def APM(G, gamma=0.1, iterations=1):
             labels[i] = l_
             v[labels[i]] += 1
 
-    return labels
+    return labels, v
