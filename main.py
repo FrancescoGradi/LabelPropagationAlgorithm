@@ -3,7 +3,7 @@ import numpy as np
 
 import algorithms
 
-graph_name = 'email-Eu-core'
+graph_name = 'email-Eu-core'    # Download from: https://snap.stanford.edu/data/
 G = nx.read_edgelist("data/{name}.txt".format(name=graph_name), create_using=nx.DiGraph(), nodetype=int)
 
 # Alcuni nodi non ci sono, ci sono nodi isolati, quindi li inserisco manualmente subito
