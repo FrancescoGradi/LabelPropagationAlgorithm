@@ -1,8 +1,91 @@
-import networkx
 import numpy as np
+import time
+import datetime
+import copy
+
+def APM_with_analytics(G, gamma=0.1, iterations=1, graph='email-Eu-core'):
+
+    max_iter = True
+    # Inizializzazione vettori labels, pi e v
+    n = G.number_of_nodes()
+    numEdges = G.number_of_edges()
+
+    labels = list(range(n))
+
+    pi = list(range(n))
+    pi = np.random.permutation(pi)
+
+    v = np.ones(n)
+    v_previous = np.zeros(n)
+    k = np.zeros(n)
+
+    # implementazione senza array di permutazione pi, ma direttamente con i
+    l_ = 0
+
+    running_time = []
+    now = datetime.datetime.now()
+    if now.time().minute < 10:
+        log_file_path = 'logs/log-{date}_{hour}:0{min}.txt'.format(date=now.date(),
+                                                                   hour=now.time().hour,
+                                                                   min=now.time().minute)
+    else:
+        log_file_path = 'logs/log-{date}_{hour}:{min}.txt'.format(date=now.date(),
+                                                                  hour=now.time().hour,
+                                                                  min=now.time().minute)
+    with open(log_file_path, 'w+') as f:
+        f.write('Run started at {time}    Date: {date}    Num. Iterations: {numIter}\n'.format(time=now.time(),
+                                                                                               date=now.date(),
+                                                                                               numIter=iterations))
+        f.write('Graph: {graph}    (nodes: {nodes}, edges: {edges})\n'.format(graph=graph,
+                                                                              nodes=n,
+                                                                              edges=numEdges))
+        f.write('\n')
+        for iter in range(iterations):
+            if iter % 5 == 0 and iter != 0:
+                gamma = gamma / 2
+            print('Starting iteration {x}.'.format(x=iter + 1))
+            start = time.clock()
+            for i in range(n):
+
+                lCandidates = np.full(n, -1)
+                for l in range(len(labels)):
+                    k[l] = len(list(x for x in list(G.neighbors(pi[i])) if labels[x] == labels[l]))
+                    lCandidates[l] = k[l]
+                    # lCandidates[l] = k[l] - gamma * (v[l] - k[l])
+
+                l_ = np.argmax(lCandidates)
+
+                v[labels[pi[i]]] -= 1
+                labels[pi[i]] = l_
+                v[labels[pi[i]]] += 1
+            end = time.clock()
+            running_time.append(end - start)
+            print('Number of nodes per label:')
+            print(list(v))
+            print('Iteration {x} ended. Elapsed time: {time} seconds.'.format(x=iter + 1, time=round(end - start, 2)))
+
+            f.write('Iteration {iter} (gamma: {gamma}):\n'.format(iter=iter + 1, gamma=gamma))
+            f.write('Number of nodes per label:\n')
+            f.write(str(list(v)) + "\n")
+            f.write('Iteration {x} ended. Elapsed time: {time} seconds.\n'.format(x=iter + 1, time=round(end - start, 2)))
+            if np.array_equal(v, v_previous):
+                print('Maximum found, stopping the algorithm.')
+                f.write('Maximum found, stopping the algorithm.\n')
+                max_iter = False
+                break
+            v_previous = copy.deepcopy(v)
+        if max_iter:
+            print('Maximum number of iteration reached, stopping the algorithm.')
+            f.write('Maximum number of iteration reached, stopping the algorithm.')
+        print('Total running time: {x} minutes and {y} seconds.'.format(x=int(sum(running_time) / 60),
+                                                                        y=(int(sum(running_time) % 60))))
+        f.write('Total running time: {x} minutes and {y} seconds.'.format(x=int(sum(running_time) / 60),
+                                                                          y=(int(sum(running_time) % 60))))
+
+    return labels, v
+
 
 def APM(G, gamma=0.1, iterations=1):
-
     # Inizializzazione vettori labels, pi e v
     n = G.number_of_nodes()
 
@@ -18,17 +101,21 @@ def APM(G, gamma=0.1, iterations=1):
     l_ = 0
 
     for iter in range(iterations):
+        if iter % 5 == 0 and iter != 0:
+            gamma = gamma / 2
+
         for i in range(n):
 
             lCandidates = np.full(n, -1)
             for l in range(len(labels)):
-                k[l] = len(list(x for x in list(G.neighbors(i)) if labels[x] == labels[l]))
-                lCandidates[l] = k[l] - gamma * (v[l] - k[l])
+                k[l] = len(list(x for x in list(G.neighbors(pi[i])) if labels[x] == labels[l]))
+                lCandidates[l] = k[l]
+                # lCandidates[l] = k[l] - gamma * (v[l] - k[l])
 
             l_ = np.argmax(lCandidates)
 
-            v[labels[i]] -= 1
-            labels[i] = l_
-            v[labels[i]] += 1
+            v[labels[pi[i]]] -= 1
+            labels[pi[i]] = l_
+            v[labels[pi[i]]] += 1
 
     return labels, v
