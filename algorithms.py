@@ -42,22 +42,29 @@ def APM_with_analytics(G, gamma=0.1, iterations=1, graph='email-Eu-core'):
                                                                               edges=numEdges))
         f.write('\n')
         for iter in range(iterations):
+            if iter % 5 == 0 and iter != 0:
+                gamma = gamma / 5
 
             print('Starting iteration {x}.'.format(x=iter + 1))
             start = time.clock()
+            iter_changes = 0
             for i in labels.keys():
-
-                lCandidates = {x: 0 for x in labels.keys()}
+                lCandidates = []
                 for l in labels.keys():
-                    k[l] = len(list(x for x in list(G.neighbors(pi[i])) if x == l))
-                    lCandidates[l] = k[l]
-                    #lCandidates[l] = k[l] - gamma * (labels[l] - k[l])
+                    k[l] = len({l}.intersection({x for x in G.neighbors(pi[i])}))
+                    lCandidates.append(k[l])
+                    #lCandidates.append(k[l] - gamma * (labels[l] - k[l]))
 
-                reverse_lCand = {v: k for k, v in lCandidates.items()}
-                candidates_list = [lCandidates[i] for i in lCandidates.keys()]
-                l_ = reverse_lCand[candidates_list[int(np.argmax(candidates_list))]]
-
+                max_index = np.argmax(lCandidates)
+                max_value = lCandidates[int(max_index)]
+                candidates = {key for key, v in k.items() if v == max_value}
+                if len(candidates) is not 0:
+                    l_ = random.choice(tuple(candidates))
+                else:
+                    l_ = random.choice([x for x in labels.keys()])
                 labels[pi[i]] -= 1
+                if pi[i] != l_:
+                    iter_changes += 1
                 pi[i] = l_
                 labels[pi[i]] += 1
             end = time.clock()
@@ -66,12 +73,11 @@ def APM_with_analytics(G, gamma=0.1, iterations=1, graph='email-Eu-core'):
             print('Number of nodes per label:')
             print(v)
             print('Iteration {x} ended. Elapsed time: {time} seconds.'.format(x=iter + 1, time=round(end - start, 2)))
-
             f.write('Iteration {iter} (gamma: {gamma}):\n'.format(iter=iter + 1, gamma=gamma))
             f.write('Number of nodes per label:\n')
             f.write(str(v) + "\n")
             f.write('Iteration {x} ended. Elapsed time: {time} seconds.\n'.format(x=iter + 1, time=round(end - start, 2)))
-            if np.array_equal(v, v_previous):
+            if np.array_equal(v, v_previous) or iter_changes < 4:
                 print('Maximum found, stopping the algorithm.')
                 f.write('Maximum found, stopping the algorithm.\n')
                 max_iter = False
@@ -79,11 +85,13 @@ def APM_with_analytics(G, gamma=0.1, iterations=1, graph='email-Eu-core'):
             v_previous = copy.deepcopy(v)
         if max_iter:
             print('Maximum number of iteration reached, stopping the algorithm.')
-            f.write('Maximum number of iteration reached, stopping the algorithm.')
+            f.write('Maximum number of iteration reached, stopping the algorithm.\n')
+        print('num clusters: ' + str(len([x for x in list(v) if x != 0])))
+        f.write('num clusters: ' + str(len([x for x in list(v) if x != 0])) + "\n")
         print('Total running time: {x} minutes and {y} seconds.'.format(x=int(sum(running_time) / 60),
                                                                         y=(int(sum(running_time) % 60))))
-        f.write('Total running time: {x} minutes and {y} seconds.'.format(x=int(sum(running_time) / 60),
-                                                                          y=(int(sum(running_time) % 60))))
+        f.write('Total running time: {x} minutes and {y} seconds.\n'.format(x=int(sum(running_time) / 60),
+                                                                            y=(int(sum(running_time) % 60))))
 
     return labels, v
 
@@ -105,7 +113,7 @@ def APM(G, gamma=0.1, iterations=1):
 
     for iter in range(iterations):
         if iter % 5 == 0 and iter != 0:
-            gamma = gamma / 2
+            gamma = gamma / 5
 
         for i in range(n):
 
@@ -113,7 +121,7 @@ def APM(G, gamma=0.1, iterations=1):
             for l in range(len(labels)):
                 k[l] = len(list(x for x in list(G.neighbors(pi[i])) if labels[x] == labels[l]))
                 lCandidates[l] = k[l]
-                # lCandidates[l] = k[l] - gamma * (v[l] - k[l])
+                #lCandidates[l] = k[l] - gamma * (v[l] - k[l])
 
             l_ = np.argmax(lCandidates)
 
