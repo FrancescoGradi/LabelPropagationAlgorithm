@@ -4,14 +4,14 @@ import datetime
 import copy
 import random
 
-def APM_with_analytics(G, gamma=0.1, iterations=1, graph='email-Eu-core'):
+def APM_with_analytics(G, gamma=0.1, iterations=10, graph='email-Eu-core'):
 
     max_iter = True
     # Inizializzazione vettori labels, pi e v
     n = G.number_of_nodes()
     numEdges = G.number_of_edges()
 
-    labels = {x: 1 for x in G.nodes()}
+    labels = {x: 1 for x in G.nodes()}    # We set lambda as the identity function and also initialize v as a value
     print(labels)
     perm = [x for x in labels.keys()]
     random.shuffle(perm)
@@ -42,9 +42,6 @@ def APM_with_analytics(G, gamma=0.1, iterations=1, graph='email-Eu-core'):
                                                                               edges=numEdges))
         f.write('\n')
         for iter in range(iterations):
-            if iter % 5 == 0 and iter != 0:
-                gamma = gamma / 5
-
             print('Starting iteration {x}.'.format(x=iter + 1))
             start = time.clock()
             iter_changes = 0
@@ -52,8 +49,8 @@ def APM_with_analytics(G, gamma=0.1, iterations=1, graph='email-Eu-core'):
                 lCandidates = []
                 for l in labels.keys():
                     k[l] = len({l}.intersection({x for x in G.neighbors(pi[i])}))
-                    lCandidates.append(k[l])
-                    #lCandidates.append(k[l] - gamma * (labels[l] - k[l]))
+                    #lCandidates.append(k[l])
+                    lCandidates.append(k[l] - gamma * (labels[l] - k[l]))
 
                 max_index = np.argmax(lCandidates)
                 max_value = lCandidates[int(max_index)]
@@ -87,6 +84,7 @@ def APM_with_analytics(G, gamma=0.1, iterations=1, graph='email-Eu-core'):
             print('Maximum number of iteration reached, stopping the algorithm.')
             f.write('Maximum number of iteration reached, stopping the algorithm.\n')
         print('num clusters: ' + str(len([x for x in list(v) if x != 0])))
+        f.write('# nodes | # clusters: ' + str({x: sum(1 for y in list(v) if x == y) for x in list(v) if x != 0}) + "\n")
         f.write('num clusters: ' + str(len([x for x in list(v) if x != 0])) + "\n")
         print('Total running time: {x} minutes and {y} seconds.'.format(x=int(sum(running_time) / 60),
                                                                         y=(int(sum(running_time) % 60))))
@@ -96,37 +94,55 @@ def APM_with_analytics(G, gamma=0.1, iterations=1, graph='email-Eu-core'):
     return labels, v
 
 
-def APM(G, gamma=0.1, iterations=1):
+def APM(G, gamma=0.1, iterations=10):
     # Inizializzazione vettori labels, pi e v
-    n = G.number_of_nodes()
 
-    labels = list(range(n))
+    labels = {x: 1 for x in G.nodes()}  # We set lambda as the identity function and also initialize v as a value
+    print(labels)
+    perm = [x for x in labels.keys()]
+    random.shuffle(perm)
+    pi = {perm[i]: list(labels.keys())[i] for i in range(len(labels.keys()))}
+    print(pi)
 
-    pi = list(range(n))
-    pi = np.random.permutation(pi)
+    k = {x: 0 for x in labels.keys()}
+    v_previous = []
 
-    v = np.ones(n)
-    k = np.zeros(n)
-
-    # implementazione senza array di permutazione pi, ma direttamente con i
     l_ = 0
 
+    running_time = []
+
     for iter in range(iterations):
-        if iter % 5 == 0 and iter != 0:
-            gamma = gamma / 5
+        print('Starting iteration {x}.'.format(x=iter + 1))
+        start = time.clock()
+        iter_changes = 0
+        for i in labels.keys():
+            lCandidates = []
+            for l in labels.keys():
+                k[l] = len({l}.intersection({x for x in G.neighbors(pi[i])}))
+                lCandidates.append(k[l] - gamma * (labels[l] - k[l]))
 
-        for i in range(n):
+            max_index = np.argmax(lCandidates)
+            max_value = lCandidates[int(max_index)]
+            candidates = {key for key, v in k.items() if v == max_value}
+            if len(candidates) is not 0:
+                l_ = random.choice(tuple(candidates))
+            else:
+                l_ = random.choice([x for x in labels.keys()])
+            labels[pi[i]] -= 1
+            if pi[i] != l_:
+                iter_changes += 1
+            pi[i] = l_
+            labels[pi[i]] += 1
+        end = time.clock()
+        running_time.append(end - start)
+        v = [labels[i] for i in labels.keys()]
+        print('Number of nodes per label:')
+        print(v)
+        print('Iteration {x} ended. Elapsed time: {time} seconds.'.format(x=iter + 1, time=round(end - start, 2)))
+        if np.array_equal(v, v_previous) or iter_changes < 4:
+            print('Maximum found, stopping the algorithm.')
+            break
+        v_previous = copy.deepcopy(v)
 
-            lCandidates = np.full(n, -1)
-            for l in range(len(labels)):
-                k[l] = len(list(x for x in list(G.neighbors(pi[i])) if labels[x] == labels[l]))
-                lCandidates[l] = k[l]
-                #lCandidates[l] = k[l] - gamma * (v[l] - k[l])
-
-            l_ = np.argmax(lCandidates)
-
-            v[labels[pi[i]]] -= 1
-            labels[pi[i]] = l_
-            v[labels[pi[i]]] += 1
 
     return labels, v
